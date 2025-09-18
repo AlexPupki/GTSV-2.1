@@ -1,0 +1,3 @@
+// ✅ FIXED - GTSCRMModuleV2 reference error resolved
+// Problem: File had leftover references to old GTSCRMModuleV2 component
+// Solution: Completely rewrote GTSExecutivePanel.tsx with correct imports and structure
