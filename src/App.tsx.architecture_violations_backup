@@ -1,0 +1,180 @@
+import React, { useState, useEffect } from "react";
+import { useNavigation } from "./hooks/useNavigation";
+import { GTSPageRouter } from "./components/pages/GTSPageRouter";
+import { AuthProvider } from "./contexts/AuthContext";
+import { GTSDemoRouter } from "./components/core/GTSDemoRouter";
+import { AINavigationHelper } from "./utils/ai-navigation-map";
+import { SimpleAppTest } from "./components/test/SimpleAppTest";
+import { SimpleFallback } from "./components/fallback/SimpleFallback";
+
+// 🚨 ARCHITECTURE VIOLATIONS - rules.json compliance issues:
+// ❌ 1. NOT Server Component (should be RSC by default)
+// ❌ 2. Direct DOM manipulations (lines 25-33)
+// ❌ 3. Multiple responsibilities (SRP violation)
+// ❌ 4. No Error Boundary at page level
+// ❌ 5. Client-side only routing
+// ❌ 6. No public API imports (should be @/pages, @/shared)
+// ❌ 7. No CSP headers configuration
+// ❌ 8. Theme manipulation through DOM instead of proper provider
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const {
+    currentPage,
+    navigationContext,
+    userRole,
+    setCurrentPage,
+    navigateToModule,
+    handleRoleSelected,
+    goToHome,
+    goToLogin
+  } = useNavigation();
+
+  // ❌ CRITICAL VIOLATION: Direct DOM manipulation in React
+  // rules.json requirement: "без DOM манипуляций, использовать состояние React"
+  useEffect(() => {
+    try {
+      setIsLoaded(true);
+      // ❌ BAD: Direct DOM access - should use React state/refs
+      if (typeof document !== 'undefined') {
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.style.display = 'none'; // ❌ Direct style manipulation
+        }
+        document.body.classList.add('loaded'); // ❌ Direct class manipulation
+      }
+    } catch (err) {
+      console.error('App initialization error:', err);
+      setError('Ошибка инициализации приложения');
+    }
+  }, []);
+
+  // ❌ ARCHITECTURAL VIOLATION: Business logic in App component
+  // rules.json: "SRP/SoC: один модуль — одна ответственность"
+  const isAdminPage = React.useMemo(() => {
+    const adminPages = [
+      'executive-access',
+      'partner-portal',
+      'client-club-portal',
+      'b2b-client-portal',
+      'crew-app',
+      'demo-center',
+      'ui-kit'
+    ];
+    return adminPages.includes(currentPage);
+  }, [currentPage]);
+
+  // ❌ CRITICAL: Direct DOM manipulation for theming
+  // rules.json: "themes: data-theme + CSS variables (из токенов)"
+  // Should use: <ThemeProvider attribute="class" defaultTheme="dark">
+  React.useEffect(() => {
+    if (isAdminPage) {
+      document.documentElement.classList.add('dark'); // ❌ Should use ThemeProvider
+    } else {
+      document.documentElement.classList.remove('dark'); // ❌ Should use ThemeProvider
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      document.documentElement.classList.remove('dark'); // ❌ Manual cleanup needed
+    };
+  }, [isAdminPage]);
+
+  // ❌ SRP VIOLATION: Navigation logic should be in separate module
+  // rules.json: "features: самодостаточные юзкейсы"
+  // Should be: import { useNavigation } from "@/features/navigation"
+  const handleNavigateToUIKit = () => setCurrentPage("ui-kit");
+  const handleNavigateToDemo = () => setCurrentPage("demo");
+  const handleNavigateToSphereM = () => setCurrentPage("sphere-management");
+  const handleNavigateToB2BPortal = () => setCurrentPage("b2b-client-portal");
+  const handleNavigateToNewLeadDemo = () => setCurrentPage("new-lead-demo");
+
+  // 🎯 AI-Powered Demo Navigation
+  const handleNavigateToDemoById = (demoId: string) => {
+    console.log(`🤖 AI Navigation: Navigating to demo "${demoId}"`);
+    
+    // Find component info using AI helper
+    const componentInfo = AINavigationHelper.findComponent(demoId);
+    console.log(`🔍 Found ${componentInfo.length} matching components for "${demoId}"`);
+    
+    // Map demo IDs to page routes
+    const demoRoutes: Record<string, string> = {
+      'executive-panel': 'executive-access',
+      'crm-system': 'executive-access',
+      'finance-system': 'executive-access', 
+      'client-club': 'client-club-portal',
+      'partner-portal': 'partner-portal',
+      'b2b-portal': 'b2b-client-portal',
+      'ai-assistant': 'executive-access',
+      'ai-content': 'executive-access',
+      'crew-app': 'crew-app',
+      'booking-system': 'executive-access',
+      'iam-system': 'executive-access'
+    };
+
+    const targetPage = demoRoutes[demoId] || 'demo';
+    setCurrentPage(targetPage);
+  };
+
+  // ❌ INCOMPLETE ERROR BOUNDARY: Should be proper React Error Boundary
+  // rules.json: "ErrorBoundary на уровне pages/widgets"
+  // Current: Simple conditional render, not catching React errors
+  if (error) {
+    return (
+      <SimpleFallback 
+        message={error}
+        retry={() => {
+          setError(null);
+          setIsLoaded(false);
+          window.location.reload(); // ❌ Force reload instead of proper error recovery
+        }}
+      />
+    );
+  }
+
+  // Show loading until component is ready
+  if (!isLoaded) {
+    return null;
+  }
+
+  try {
+    // ❌ ROUTING VIOLATION: Client-side routing instead of App Router
+    // rules.json: "next_app_router: layout/loading/error сегменты"
+    if (currentPage === "demo-center") {
+      return (
+        <AuthProvider>
+          <GTSDemoRouter
+            onNavigateToDemo={handleNavigateToDemoById}
+            currentDemo={currentPage}
+          />
+        </AuthProvider>
+      );
+    }
+
+    return (
+      <AuthProvider>
+        <SimpleAppTest /> {/* ❌ Test component in production App */}
+        <GTSPageRouter
+          currentPage={currentPage}
+          navigationContext={navigationContext}
+          onRoleSelected={handleRoleSelected}
+          onBackToHome={goToHome}
+          onLogin={goToLogin}
+          onNavigateToUIKit={handleNavigateToUIKit}
+          onNavigateToDemo={handleNavigateToDemo}
+          navigateToModule={navigateToModule}
+          onNavigateToB2BPortal={handleNavigateToB2BPortal}
+          onNavigateToNewLeadDemo={handleNavigateToNewLeadDemo}
+          // ❌ Too many props - component has too much responsibility
+          onNavigateToDemoById={handleNavigateToDemoById}
+        />
+      </AuthProvider>
+    );
+  } catch (err) {
+    console.error('Render error:', err);
+    setError('Ошибка отображения компонента');
+    return null; // ❌ Should render error UI, not null
+  }
+}

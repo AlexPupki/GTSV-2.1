@@ -1,0 +1,24 @@
+// 🚨 LEGACY App.tsx - ARCHIVED
+// ❌ Нарушения rules.json - см. комментарии в коде
+// ✅ Заменен на FSD архитектуру в /src/app/App.tsx
+
+import React, { useState, useEffect } from "react";
+import { useNavigation } from "./hooks/useNavigation";
+import { GTSPageRouter } from "./components/pages/GTSPageRouter";
+import { AuthProvider } from "./contexts/AuthContext";
+import { GTSDemoRouter } from "./components/core/GTSDemoRouter";
+import { AINavigationHelper } from "./utils/ai-navigation-map";
+import { SimpleAppTest } from "./components/test/SimpleAppTest";
+import { SimpleFallback } from "./components/fallback/SimpleFallback";
+
+// 🚨 ARCHITECTURE VIOLATIONS - rules.json compliance issues:
+// ❌ 1. NOT Server Component (should be RSC by default)
+// ❌ 2. Direct DOM manipulations (lines 25-33)
+// ❌ 3. Multiple responsibilities (SRP violation)
+// ❌ 4. No Error Boundary at page level
+// ❌ 5. Client-side only routing
+// ❌ 6. No public API imports (should be @/pages, @/shared)
+// ❌ 7. No CSP headers configuration
+// ❌ 8. Theme manipulation through DOM instead of proper provider
+
+// DEPRECATED - USE /src/app/App.tsx INSTEAD
